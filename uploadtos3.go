@@ -113,6 +113,7 @@ func main() {
 					if err == nil {
 						break
 					}
+					time.Sleep(time.Millisecond * 100)
 				}
 				ff.Close()
 				if err != nil {
