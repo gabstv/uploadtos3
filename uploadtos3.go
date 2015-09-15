@@ -108,7 +108,12 @@ func main() {
 					print("Error (os.Open): " + pa + " " + err.Error() + "\n")
 					return nil
 				}
-				err = b.PutReaderHeader(filepath.Join("/", pa), ff, info.Size(), headers(guessMIME(pa)), s3.PublicRead)
+				for t := 0; t < 5; t++ {
+					err = b.PutReaderHeader(filepath.Join("/", pa), ff, info.Size(), headers(guessMIME(pa)), s3.PublicRead)
+					if err == nil {
+						break
+					}
+				}
 				ff.Close()
 				if err != nil {
 					print("Error (S3 PUT): " + pa + " " + err.Error() + "\n")
