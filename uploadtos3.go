@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -19,6 +20,7 @@ var (
 	bucket  = ""
 	once    = sync.Once{}
 	reduced = true
+	lerrors = make([]string, 0)
 )
 
 func initMIME() {
@@ -54,6 +56,11 @@ func headers(ctype string) map[string][]string {
 	return customHeaders
 }
 
+func errori(v string) {
+	lerrors = append(lerrors, v)
+	print(v)
+}
+
 func main() {
 	flag.StringVar(&ak, "key", "", "Access Key")
 	flag.StringVar(&sk, "secret", "", "Secret Access Key")
@@ -76,27 +83,27 @@ func main() {
 		p0 := flag.Arg(i)
 		fi, err := os.Stat(p0)
 		if err != nil {
-			print("Error: " + p0 + " " + err.Error() + "\n")
+			errori("Error: " + p0 + " " + err.Error() + "\n")
 			continue
 		}
 		if !fi.IsDir() {
 			// upload right away
 			ff, err := os.Open(p0)
 			if err != nil {
-				print("Error (os.Open): " + p0 + " " + err.Error() + "\n")
+				errori("Error (os.Open): " + p0 + " " + err.Error() + "\n")
 				continue
 			}
 			err = b.PutReaderHeader(filepath.Join("/", p0), ff, fi.Size(), headers(guessMIME(p0)), s3.PublicRead)
 			ff.Close()
 			if err != nil {
-				print("Error (S3 PUT): " + p0 + " " + err.Error() + "\n")
+				errori("Error (S3 PUT): " + p0 + " " + err.Error() + "\n")
 			}
 		} else {
 			// clever way to put dir
 			filepath.Walk(p0, func(pa string, info os.FileInfo, err error) error {
 				print(pa + "\n")
 				if err != nil {
-					print("Error: " + err.Error() + "\n")
+					errori("Error: " + err.Error() + "\n")
 					return nil
 				}
 				if info.IsDir() {
@@ -105,7 +112,7 @@ func main() {
 				//
 				ff, err := os.Open(pa)
 				if err != nil {
-					print("Error (os.Open): " + pa + " " + err.Error() + "\n")
+					errori("Error (os.Open): " + pa + " " + err.Error() + "\n")
 					return nil
 				}
 				for t := 0; t < 5; t++ {
@@ -117,11 +124,19 @@ func main() {
 				}
 				ff.Close()
 				if err != nil {
-					print("Error (S3 PUT): " + pa + " " + err.Error() + "\n")
+					errori("Error (S3 PUT): " + pa + " " + err.Error() + "\n")
 				}
 				//
 				return nil
 			})
 		}
+	}
+	if len(lerrors) > 0 {
+		print("Errors (" + strconv.Itoa(len(lerrors)) + "):\n")
+		for _, v := range lerrors {
+			print(v)
+		}
+	} else {
+		print("No errors.")
 	}
 }
