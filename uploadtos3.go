@@ -137,6 +137,6 @@ func main() {
 			print(v)
 		}
 	} else {
-		print("No errors.")
+		print("No errors.\n")
 	}
 }
